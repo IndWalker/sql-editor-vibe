@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Playground Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- CodeMirror Core -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
+    
+    <!-- CodeMirror Theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/material-palenight.min.css">
+    
+    <!-- CodeMirror Addons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/show-hint.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/matchesonscrollbar.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/dark-mode.css">
+    
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    mono: ['"JetBrains Mono"', 'monospace'],
+                },
+                colors: {
+                    'primary': {
+                        50: '#eef2ff',
+                        100: '#e0e7ff',
+                        200: '#c7d2fe',
+                        300: '#a5b4fc',
+                        400: '#818cf8',
+                        500: '#6366f1',
+                        600: '#4f46e5',
+                        700: '#4338ca',
+                        800: '#3730a3',
+                        900: '#312e81',
+                        950: '#1e1b4b',
+                    },
+                },
+            }
+        }
+    }
+    </script>
+    
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Dark mode styles */
+        .dark {
+            color-scheme: dark;
+        }
+        
+        /* CodeMirror Customizations */
+        .CodeMirror {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            height: auto;
+            min-height: 50px;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .dark .CodeMirror {
+            border-color: #374151;
+        }
+        
+        .CodeMirror-focused {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        
+        .dark .CodeMirror-focused {
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+        }
+        
+        /* Status indicator */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-dot.connected {
+            background-color: #10b981;
+        }
+        
+        .status-dot.disconnected {
+            background-color: #ef4444;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* Loading spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Database badges */
+        .dialect-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            font-weight: 500;
+        }
+        
+        /* Shortcut badge */
+        .shortcut-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-left: 4px;
+        }
+        
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            padding: 12px 16px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .dark .toast {
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 transition-colors dark:bg-gray-900 dark:text-gray-100" id="body">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="text-primary-600 text-2xl">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h1 class="text-xl font-semibold">SQL Playground <span class="text-primary-600">Pro</span></h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button id="showShortcutsBtn" class="text-gray-500 hover:text-gray-700 transition">
+                        <i class="fas fa-keyboard mr-1"></i> Shortcuts
+                    </button>
+                    <button id="toggleThemeBtn" class="text-gray-500 hover:text-gray-700 transition">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="flex-1 container mx-auto px-4 py-6">
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Left Sidebar -->
+                <div class="col-span-12 md:col-span-3 space-y-6">
+                    <!-- Database Connections -->
+                    <div class="bg-white rounded-lg shadow dark:bg-gray-800 dark:border dark:border-gray-700">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <h2 class="font-semibold text-lg dark:text-gray-200">Database Connections</h2>
+                        </div>
+                        <div class="p-4 space-y-3" id="dbConnections">
+                            <!-- Database connections will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Sample Queries -->
+                    <div class="bg-white rounded-lg shadow dark:bg-gray-800 dark:border dark:border-gray-700">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <h2 class="font-semibold text-lg dark:text-gray-200">Sample Queries</h2>
+                        </div>
+                        <div class="p-4 space-y-3" id="sampleQueries">
+                            <!-- Sample queries will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Pro Tips -->
+                    <div class="bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-lg shadow-lg p-5">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-bolt text-yellow-300 mr-2"></i>
+                            <h3 class="font-semibold">Pro Tips</h3>
+                        </div>
+                        <p class="text-sm mb-2">
+                            Press <kbd class="shortcut-badge bg-white/20 text-white">F1</kbd> for SQL formatting.
+                        </p>
+                        <p class="text-sm">
+                            Press <kbd class="shortcut-badge bg-white/20 text-white">Ctrl+Enter</kbd> to execute query.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Main Editor Area -->
+                <div class="col-span-12 md:col-span-9 space-y-6">
+                    <!-- Editor Card -->
+                    <div class="bg-white rounded-lg shadow dark:bg-gray-800 dark:border dark:border-gray-700">
+                        <div class="p-4 border-b border-gray-200 flex items-center justify-between dark:border-gray-700">
+                            <div class="flex items-center">
+                                <h2 class="font-semibold text-lg dark:text-gray-200">SQL Editor</h2>
+                                <div class="ml-3 dialect-badge bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300" id="dialectBadge">
+                                    sqlite
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <button id="formatSqlBtn" class="px-3 py-1 rounded text-sm bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                    <i class="fas fa-code mr-1"></i> Format
+                                </button>
+                                <button id="clearEditorBtn" class="px-3 py-1 rounded text-sm bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                    <i class="fas fa-eraser mr-1"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- CodeMirror Editor Container -->
+                        <div class="border-b border-gray-200 dark:border-gray-700">
+                            <textarea id="sqlEditor"></textarea>
+                        </div>
+                        
+                        <!-- Editor Status Bar -->
+                        <div class="flex items-center justify-between px-4 py-1 bg-gray-50 text-xs text-gray-500 rounded-b-lg dark:bg-gray-700 dark:text-gray-400">
+                            <div id="cursorPosition">
+                                Line: 1, Column: 1
+                            </div>
+                            <div id="editorStats">
+                                0 characters
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <button id="executeQueryBtn" class="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-md shadow-sm transition-all dark:bg-primary-700 dark:hover:bg-primary-600">
+                                <i class="fas fa-play mr-2"></i>
+                                Execute (Ctrl+Enter)
+                            </button>
+                            
+                            <button id="exportResultsBtn" class="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors opacity-50 cursor-not-allowed dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                <i class="fas fa-download mr-1"></i> Export
+                            </button>
+                        </div>
+                        
+                        <div id="queryLoader" class="flex items-center text-primary-600 hidden dark:text-primary-400">
+                            <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-sm">Running query...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Query Error -->
+                    <div id="errorContainer" class="bg-red-50 border border-red-200 rounded-lg p-4 hidden dark:bg-red-900/20 dark:border-red-800">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 text-red-500 dark:text-red-400">
+                                <i class="fas fa-exclamation-circle text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800 dark:text-red-300">Error in your SQL query</h3>
+                                <div id="errorMessage" class="mt-2 text-sm text-red-700 whitespace-pre-wrap font-mono dark:text-red-400"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Query Results -->
+                    <div id="resultsContainer" class="bg-white rounded-lg shadow hidden dark:bg-gray-800 dark:border dark:border-gray-700">
+                        <div class="p-4 border-b border-gray-200 flex items-center justify-between dark:border-gray-700">
+                            <div class="flex items-center">
+                                <h2 class="font-semibold text-lg dark:text-gray-200">Results</h2>
+                                <span id="resultCount" class="ml-3 text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full dark:bg-green-900/40 dark:text-green-300">
+                                    0 rows
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-3">
+                                <button id="copyResultsBtn" class="text-sm text-gray-500 hover:text-gray-700 transition-colors dark:text-gray-400 dark:hover:text-gray-300">
+                                    <i class="fas fa-copy mr-1"></i> Copy
+                                </button>
+                                <button id="csvExportBtn" class="text-sm text-gray-500 hover:text-gray-700 transition-colors dark:text-gray-400 dark:hover:text-gray-300">
+                                    <i class="fas fa-file-csv mr-1"></i> CSV
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto max-h-[500px]">
+                            <table id="resultsTable" class="min-w-full">
+                                <thead id="resultsTableHead">
+                                    <!-- Column headers will be inserted here -->
+                                </thead>
+                                <tbody id="resultsTableBody">
+                                    <!-- Result rows will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="rowLimitWarning" class="p-3 border-t border-gray-200 bg-yellow-50 text-yellow-800 text-xs hidden dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300">
+                            <i class="fas fa-info-circle mr-1"></i> 
+                            Results are limited to 10 rows. Add a LIMIT clause to your query to see specific results.
+                        </div>
+                    </div>
+                    
+                    <!-- Empty Results -->
+                    <div id="emptyResultsContainer" class="bg-green-50 border border-green-200 rounded-lg p-4 hidden dark:bg-green-900/20 dark:border-green-800">
+                        <div class="flex">
+                            <div class="flex-shrink-0 text-green-500 dark:text-green-400">
+                                <i class="fas fa-check-circle text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800 dark:text-green-300">Query executed successfully</h3>
+                                <div class="mt-1 text-sm text-green-700 dark:text-green-400">The query was executed successfully but returned no results.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 py-4 mt-auto dark:bg-gray-800 dark:border-gray-700">
+            <div class="container mx-auto px-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <div>
+                    <span class="font-medium">SQL Playground Pro</span> &middot; A modern SQL query editor
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span>
+                        <i class="fas fa-keyboard mr-1"></i> Press Ctrl+Enter to run query
+                    </span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcutsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between dark:border-gray-700">
+                <h3 class="text-lg font-semibold dark:text-gray-200">Keyboard Shortcuts</h3>
+                <button id="closeShortcutsBtn" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 grid grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-medium mb-3 text-primary-600 dark:text-primary-400">Editor</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Execute Query</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Ctrl+Enter</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Format SQL</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">F1</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Autocomplete</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Ctrl+Space</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Find</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Ctrl+F</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium mb-3 text-primary-600 dark:text-primary-400">General</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Toggle Dark Mode</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Shift+D</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Export Results as CSV</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Ctrl+S</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="dark:text-gray-300">Copy Results</span>
+                            <div class="shortcut-badge bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Ctrl+Shift+C</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-200 bg-gray-50 text-sm text-gray-500 rounded-b-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+                Keyboard shortcuts are designed to increase your productivity while using SQL Playground Pro.
+            </div>
+        </div>
+    </div>
+    
+    <!-- SQL Dialect Selection Modal -->
+    <div id="dialectModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold dark:text-gray-200">Select SQL Dialect</h3>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div id="dialectOptions">
+                    <!-- Dialect options will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/sql-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/comment/comment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/search.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/searchcursor.min.js"></script>
+    
+    <!-- App Script -->
+    <script src="/static/js/sql-editor.js"></script>
+</body>
+</html>

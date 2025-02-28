@@ -1,0 +1,63 @@
+# Go specific
+/bin/
+/pkg/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Compiled Go binaries
+/main
+
+# Go Dependency directories
+/vendor/
+/go.sum
+/go.mod
+
+# JavaScript
+/node_modules/
+*.min.js
+*.map
+
+# Docker
+.dockerignore
+*.env
+
+# VSCode (allow some shared settings)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Build outputs
+/build/
+/dist/
+
+# Local environment files
+.env
+.env.local
+
+#SQLite
+*.sqlite
