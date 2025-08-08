@@ -152,21 +152,32 @@ func verifyPostgreSQLSafety(sqlLower string) SafetyCheckResult {
 // HasLimitForSelect checks if SELECT statements have a LIMIT clause
 // and adds a default limit if necessary
 func HasLimitForSelect(sql string) (string, bool) {
-	sqlLower := strings.ToLower(sql)
+	trimmed := strings.TrimSpace(sql)
+	sqlLower := strings.ToLower(trimmed)
 
 	// If it's not a SELECT statement, no change needed
-	if !strings.HasPrefix(strings.TrimSpace(sqlLower), "select") {
+	if !strings.HasPrefix(sqlLower, "select") {
 		return sql, false
 	}
 
-	// Check if LIMIT is already present
-	limitRegex := regexp.MustCompile(`\s+limit\s+\d+`)
+	// Check if LIMIT is already present (case insensitive)
+	limitRegex := regexp.MustCompile(`\blimit\b`)
 	if limitRegex.MatchString(sqlLower) {
-		return sql, false
+		return trimmed, false
+	}
+
+	// Preserve trailing semicolon if present
+	hasSemicolon := strings.HasSuffix(trimmed, ";")
+	if hasSemicolon {
+		trimmed = strings.TrimSuffix(trimmed, ";")
 	}
 
 	// Add a default LIMIT of 100 rows
-	modifiedSQL := sql + " LIMIT 100"
+	modifiedSQL := trimmed + " LIMIT 100"
+	if hasSemicolon {
+		modifiedSQL += ";"
+	}
+
 	return modifiedSQL, true
 }
 
